@@ -1,0 +1,25 @@
+language: rus+eng
+
+receipts_path: "data/txt"
+
+results_as_json: false
+
+markets:
+  Пятерочка:
+     - Пятерочка
+     - пятерочка
+
+sum_keys:
+  - итог
+  - итого
+  - оплате
+  - оплата
+
+ignore_keys:
+  - стопслово
+
+sum_format: '\d+(\.\s?|,\s?|[^a-zA-Z\d])\d{2}'
+
+item_format: '([а-яА-ЯёЁa-zA-Z].+)\s(\d|\d{1,2}.\d{1,2})\s(\d|\d{1,5}.\d{1,2})\s'
+
+date_format: '((\d{2}\.\d{2}\.\d{2,4})|(\d{2,4}\/\d{2}\/\d{2})|(\d{2}\/\d{2}\/\d{4}))'
