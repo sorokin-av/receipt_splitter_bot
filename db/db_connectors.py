@@ -1,3 +1,4 @@
+import time
 import pickle
 
 from pymongo import MongoClient
@@ -18,14 +19,14 @@ class MongoBase:
     def insert_one(self, collection, data):
         self._db[collection].insert_one(document=data)
 
-    def find(self, collection, query, many=False):
+    def find(self, collection, query, many=False, **kwargs):
         if many:
             document = []
-            cursor = self._db[collection].find(filter=query)
+            cursor = self._db[collection].find(filter=query, **kwargs)
             for doc in cursor:
                 document.append(doc)
         else:
-            document = self._db[collection].find_one(filter=query)
+            document = self._db[collection].find_one(filter=query, **kwargs)
         return document
 
     def update_one(self, collection, query, data):
@@ -46,14 +47,18 @@ class ReceiptsDBConnector(MongoBase):
     def __init__(self):
         system_log("Init {connector}".format(connector=type(self).__name__))
         super().__init__()
+        # self.drop(self.RECEIPTS)
 
     @property
     def receipt_document(self):
         return {
             CHAT_ID: "",
             RECEIPT_ID: "",
+            RAW_ITEMS: [],
+            CLEAN_ITEMS: [],
+            SHARED_ITEMS: [],
             DIALOG_STATE_ID: "",
-            ACCESS_TIMESTAMP: "",
+            ACCESS_TIMESTAMP: time.time(),
             IS_RECEIPT_CLOSED: False,
             TOTAL_VOTERS_COUNT: 0,
             POLLS: []
@@ -86,24 +91,38 @@ class ReceiptsDBConnector(MongoBase):
         }
 
     def set_receipt(self, document):
+        system_log("Insert in {coll} document: {doc}".format(coll=self.RECEIPTS, doc=document))
         self.insert_one(collection=self.RECEIPTS, data=document)
+        system_log("Document was successfully inserted")
 
-    def get_dialog_states(self, chat_id):
-        receipts = self.find(
+    def get_dialog_state(self, chat_id):
+        current_receipt = self.find(
             collection=self.RECEIPTS,
             query={
                 CHAT_ID: chat_id
             },
-            many=True
+            sort=[(ACCESS_TIMESTAMP, -1)]
         )
-        return [receipt[DIALOG_STATE_ID] for receipt in receipts]
+        return current_receipt[DIALOG_STATE_ID] if current_receipt else None
 
-    def get_receipt(self, keys):
+    def get_receipt(self, keys, **kwargs):
+        system_log("Find document in {coll} by query: {query}".format(coll=self.RECEIPTS, query=keys))
         receipt = self.find(
             collection=self.RECEIPTS,
-            query=keys
+            query=keys,
+            **kwargs
         )
+        system_log("Document was successfully found: {doc}".format(doc=receipt))
         return receipt if receipt else {}
+
+    def get_receipt_by_state(self, chat_id, state_id):
+        return self.get_receipt(
+            keys={
+                CHAT_ID: chat_id,
+                DIALOG_STATE_ID: state_id
+            },
+            sort=[(ACCESS_TIMESTAMP, -1)]
+        )
 
     def update_receipt_by_id(self, receipt_id, update):
         set_key = "$set"
@@ -112,6 +131,7 @@ class ReceiptsDBConnector(MongoBase):
         for key, value in update.items():
             mongo_update[set_key][key] = value
 
+        system_log("Update document in {coll} by id: {id}".format(coll=self.RECEIPTS, id=receipt_id))
         self.update_one(
             collection=self.RECEIPTS,
             query={
@@ -119,6 +139,7 @@ class ReceiptsDBConnector(MongoBase):
             },
             data=mongo_update
         )
+        system_log("Document was successfully updated. Update data: {data}".format(data=update))
 
     @property
     def all_documents(self):

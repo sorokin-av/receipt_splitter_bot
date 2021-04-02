@@ -19,6 +19,7 @@ handlers:
     class: logging.StreamHandler
     stream: ext://sys.stdout
   file_handler:
+    formatter: console_simple_formatter
     backupCount: 30
     encoding: utf-8
     filename: "/tmp/system.log"

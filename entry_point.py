@@ -23,6 +23,18 @@ if __name__ == '__main__':
     dp.register_poll_handler(bot.close_poll, lambda poll: poll.is_closed is True)
     dp.register_message_handler(bot.parse_receipt_qr_and_send_poll, lambda message: bot.check_qr_code(message.text))
     dp.register_message_handler(bot.parse_receipt_image_and_send_poll, content_types=["photo"])
-    dp.register_message_handler(bot.start_deeplink, lambda message: bot.state_handler(message, value=bot.ENTER_VOTERS_STATE))
+
+    dp.register_message_handler(
+        bot.raw_items_validation, lambda message: bot.state_handler(message, state_id=bot.state.ITEMS_VALIDATION)
+    )
+    dp.register_message_handler(
+        bot.raw_items_correction, lambda message: bot.state_handler(message, state_id=bot.state.ITEMS_CORRECTION)
+    )
+    dp.register_message_handler(
+        bot.mark_shared_items, lambda message: bot.state_handler(message, state_id=bot.state.CHOOSE_SHARED_ITEMS)
+    )
+    dp.register_message_handler(
+        bot.start_deeplink, lambda message: bot.state_handler(message, state_id=bot.state.ENTER_VOTERS_COUNT)
+    )
 
     executor.start_polling(dp)

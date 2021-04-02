@@ -80,16 +80,21 @@ class QRParser:
         except requests.exceptions.RequestException:
             system_log("Request exception occurred", level="ERROR", exc_info=True)
         finally:
-            system_log(response.text if response else "Unable to log response")
-            return response.json() if response.status_code == 200 else {}
+            if hasattr(response, "text") and hasattr(response, "status_code"):
+                system_log("Obtained response from {url}: {response}".format(url=url, response=response.text))
+                return response.json() if response.status_code == 200 else {}
+            else:
+                return {}
 
     def _set_session_id(self) -> None:
+        system_log("Set session id with federal tax service")
         resp = self.request_handling(method=Methods.POST, url=self.AUTH_URL,
                                      json=self.__auth_payload, headers=self.headers)
         session_id = resp["sessionId"] if resp else None
         self.__session_id = session_id
 
     def _get_ticket_id(self, qr: str) -> str:
+        system_log("Fetch ticket id from {url}".format(url=self.TICKET_URL))
         resp = self.request_handling(method=Methods.POST, url=self.TICKET_URL,
                                      json={"qr": qr}, headers=self.headers_with_session)
         ticket_id = resp["id"] if resp else ""
@@ -98,25 +103,31 @@ class QRParser:
     def _get_federal_tax_ticket(self, qr: str) -> dict:
         ticket_id = self._get_ticket_id(qr)
         ticket_description_url = self.TICKETS_URL + ticket_id
+        system_log("Fetch ticket description by id={id} from {url}".format(id=ticket_id, url=self.TICKET_URL))
         resp = self.request_handling(method=Methods.GET, url=ticket_description_url,
                                      headers=self.headers_with_session)
         ticket = resp.get("ticket")
         if ticket:
-            system_log("Successful federal tax service ticket obtain")
-            return ticket["document"]["receipt"]
+            receipt = ticket["document"]["receipt"]
+            system_log("Successful federal tax service receipt obtaining: receipt={receipt}".format(receipt=receipt))
+            return receipt
         else:
+            system_log("Failed to obtain receipt from FTS")
             return {}
 
     def _get_backup_ofd_ticket(self, qr: str) -> dict:
+        system_log("Fetch ticket description for qr code '{qr}' from backup URL: {url}".format(qr=qr, url=self.BACKUP_TICKETS_URL))
         command = 'curl --data "{qr}" {host}'.format(qr=qr, host=self.BACKUP_TICKETS_URL)
         pipe = subprocess.Popen(command.split(), stdout=subprocess.PIPE, stderr=sys.stderr)
         if not pipe.stderr:
             resp = json.loads(pipe.stdout.read().decode())
             ticket = resp.get("data")
             if isinstance(ticket, dict):
-                system_log("Successful backup OFD ticket obtain")
-                return ticket["json"]
+                receipt = ticket["json"]
+                system_log("Successful backup OFD receipt obtaining: receipt={receipt}".format(receipt=receipt))
+                return receipt
             else:
+                system_log("Failed to obtain receipt from backup OFD")
                 return {}
         else:
             return {}
@@ -147,20 +158,26 @@ class QRParser:
                 clean_items.append(clean_item)
             return clean_items
 
+        system_log("Start preprocessing receipt options")
         payload = _preprocessing_payload()
         payload["items"] = _clean_items()
         if isinstance(payload["dateTime"], int):
             payload["dateTime"] = datetime.fromtimestamp(ticket["dateTime"]).isoformat()
 
+        system_log("Sending raw receipt data for preprocessing")
         response = self.request_handling(method=Methods.POST, url=self.TINKOFF_FNS_NLP_URL, json=payload)
         processed_items = response.get("result", {}).get("items", [])
         if processed_items:
+            system_log("Successful receipt preprocessing")
             for position, item in enumerate(ticket["items"]):
                 item["name"] = processed_items[position]["look"]
                 item["price"] = int(item["price"]) / 100
+        else:
+            system_log("Failed to preprocess receipt")
 
     async def get_ticket_items(self, qr: str):
         loop = asyncio.get_running_loop()
+        system_log("Get running loop for asynchronous ticket fetch")
         with ThreadPoolExecutor() as pool:
             futures = [
                 loop.run_in_executor(pool, partial(self._get_federal_tax_ticket, qr=qr)),

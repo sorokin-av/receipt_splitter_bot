@@ -1,0 +1,15 @@
+*.orig
+*.pyc
+*.pyo
+*.ipynb
+*.env
+*.log
+.DS_Store
+
+.idea/
+bot_venv
+__pycache__
+
+!.gitignore
+!README.md
+
