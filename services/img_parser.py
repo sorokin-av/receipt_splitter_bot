@@ -18,24 +18,21 @@ from receipt_parser_core.enhancer import enhance_image, sharpen_image
 from receipt_parser_core.config import read_config
 
 from bot_config import PARSER_CONFIG_PATH, INPUT_FOLDER, TMP_FOLDER
-from utils.logger import system_log
+from utils.logger import behavior_log
+from services.fields import NAME, QUANTITY, PRICE
 
 
 class ImageParser:
-    NAME = "name"
-    QUANTITY = "quantity"
-    PRICE = "price"
-
     def __init__(self):
         self._config = read_config(PARSER_CONFIG_PATH)
-        system_log("Init {parser}".format(parser=type(self).__name__))
+        behavior_log("Init {parser}".format(parser=type(self).__name__))
 
     @property
     def item(self):
         return {
-            self.NAME: "",
-            self.QUANTITY: 0,
-            self.PRICE: 0
+            NAME: "",
+            QUANTITY: 0,
+            PRICE: 0
         }
 
     @staticmethod
@@ -133,7 +130,7 @@ class ImageParser:
         return tmp_path
 
     async def parse(self, filename):
-        system_log("Start processing image {name}".format(name=filename))
+        behavior_log("Start processing image {name}".format(name=filename))
 
         blurred_img = self._enhance_image(filename, blur=True)
         non_blurred_img = self._enhance_image(filename, blur=False)
@@ -163,7 +160,7 @@ class ImageParser:
             match = re.search(self._config.item_format, line)
             if hasattr(match, "group") and len(match.groups()) >= 3:
                 line = line.lower().replace("\n", "")
-                system_log("Matched line with receipt option regexp: {line}".format(line=line))
+                behavior_log("Matched line with receipt option regexp: {line}".format(line=line))
 
                 name, quantity, price = self.get_item_attrs(regexp_match=match)
 
@@ -178,7 +175,7 @@ class ImageParser:
                         if item:
                             items.append(item)
 
-        system_log("Finish image processing and sending items to bot")
+        behavior_log("Finish image processing and sending items to bot")
         return items
 
     @staticmethod
@@ -196,7 +193,7 @@ class ImageParser:
         except ValueError:
             return
         else:
-            item[self.NAME] = name.lower()
-            item[self.QUANTITY] = int(quantity / 100) if quantity >= 100 else int(quantity)
-            item[self.PRICE] = price
+            item[NAME] = name.lower()
+            item[QUANTITY] = int(quantity / 100) if quantity >= 100 else int(quantity)
+            item[PRICE] = price
         return item

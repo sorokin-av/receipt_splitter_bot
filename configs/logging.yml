@@ -1,6 +1,6 @@
 ---
 loggers:
-  system_logger:
+  behavior_logger:
     handlers:
     - console_handler
     - file_handler

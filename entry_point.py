@@ -17,12 +17,11 @@ if __name__ == '__main__':
     dp = Dispatcher(bot=Bot(token=getenv(BOT_TOKEN)))
     bot = ReceiptBot(dispatcher=dp)
 
-    dp.register_message_handler(bot.share_poll, lambda message: bot.check_deeplink(message.text))
+    dp.register_message_handler(bot.start_inline_poll, lambda message: bot.check_deeplink(message.text))
     dp.register_message_handler(bot.start_message, commands=["start"])
-    dp.register_poll_answer_handler(bot.handle_poll_answer)
-    dp.register_poll_handler(bot.close_poll, lambda poll: poll.is_closed is True)
     dp.register_message_handler(bot.parse_receipt_qr_and_send_poll, lambda message: bot.check_qr_code(message.text))
     dp.register_message_handler(bot.parse_receipt_image_and_send_poll, content_types=["photo"])
+    dp.register_callback_query_handler(bot.inline_poll_handler)
 
     dp.register_message_handler(
         bot.raw_items_validation, lambda message: bot.state_handler(message, state_id=bot.state.ITEMS_VALIDATION)
@@ -31,10 +30,7 @@ if __name__ == '__main__':
         bot.raw_items_correction, lambda message: bot.state_handler(message, state_id=bot.state.ITEMS_CORRECTION)
     )
     dp.register_message_handler(
-        bot.mark_shared_items, lambda message: bot.state_handler(message, state_id=bot.state.CHOOSE_SHARED_ITEMS)
-    )
-    dp.register_message_handler(
-        bot.start_deeplink, lambda message: bot.state_handler(message, state_id=bot.state.ENTER_VOTERS_COUNT)
+        bot.create_start_deeplink, lambda message: bot.state_handler(message, state_id=bot.state.ENTER_VOTERS_COUNT)
     )
 
     executor.start_polling(dp)

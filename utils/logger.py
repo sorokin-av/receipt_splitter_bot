@@ -1,8 +1,8 @@
 import logging.config
 
-from bot_config import get_config, LOGGING_CONFIG_PATH, SYSTEM_LOGGER_NAME
+from bot_config import get_config, LOGGING_CONFIG_PATH, LOGGER_NAME
 
-system_logger = logging.getLogger(SYSTEM_LOGGER_NAME)
+behavior_logger = logging.getLogger(LOGGER_NAME)
 
 
 def init_logger():
@@ -10,9 +10,9 @@ def init_logger():
     logging.config.dictConfig(config)
 
 
-def system_log(message, level="INFO", exc_info=None):
+def behavior_log(message, level="INFO", exc_info=None):
     try:
         level_name = logging.getLevelName(level)
-        system_logger.log(level_name, message, exc_info=exc_info)
+        behavior_logger.log(level_name, message, exc_info=exc_info)
     except:
-        system_logger.log(logging.getLevelName("ERROR"), "system_log: Failed to write a log", exc_info=True)
+        behavior_logger.log(logging.getLevelName("ERROR"), "behavior_log: Failed to write a log", exc_info=True)
